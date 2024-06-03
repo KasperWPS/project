@@ -1,0 +1,4 @@
+.vagrant
+sata*
+disks/*.vdi
+id_*

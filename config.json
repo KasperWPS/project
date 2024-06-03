@@ -1,0 +1,221 @@
+[
+  {
+    "name": "reverseProxy",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.6", "adapter": 3, "netmask": "255.255.255.252", "virtualbox__intnet": "routernet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2501, "auto_correct": false },
+      { "guest": 80,  "host": 8080, "auto_correct": false },
+      { "guest": 443, "host": 8443, "auto_correct": false }
+    ],
+    "memory": 640,
+    "no_share": true
+  },
+  {
+    "name": "inetRouter",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.5",   "adapter": 2, "netmask": "255.255.255.252",   "virtualbox__intnet": "routernet" },
+      { "ip": "192.168.0.126", "adapter": 3, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2502, "auto_correct": false }
+    ],
+    "memory": 640,
+    "no_share": true
+  },
+  {
+    "name": "repo",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.65", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh",  "host": 2503, "auto_correct": false },
+      { "guest": 80, "host": 2800, "auto_correct": false }
+    ],
+    "memory": 1024,
+    "no_share": true
+  },
+  {
+    "name": "mysql-source",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.66", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2504, "auto_correct": false }
+    ],
+    "memory": 768,
+    "no_share": true
+  },
+  {
+    "name": "mysql-replica",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.67", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2505, "auto_correct": false }
+    ],
+    "memory": 768,
+    "no_share": true
+  },
+  {
+    "name": "brick1",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.68", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2506, "auto_correct": false }
+    ],
+    "memory": 1024,
+    "no_share": true,
+    "disks": {
+        "sata1": {
+            "dfile": "./disks/sata1.vdi",
+            "size": "4096",
+            "port": "1"
+        }
+    }
+  },
+  {
+    "name": "brick2",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.69", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2507, "auto_correct": false }
+    ],
+    "memory": 1024,
+    "no_share": true,
+    "disks": {
+        "sata1": {
+            "dfile": "./disks/sata2.vdi",
+            "size": "4096",
+            "port": "1"
+        }
+    }
+  },
+  {
+    "name": "brick3",
+    "cpus": 1,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.70", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2508, "auto_correct": false }
+    ],
+    "memory": 1024,
+    "no_share": true,
+    "disks": {
+        "sata1": {
+            "dfile": "./disks/sata3.vdi",
+            "size": "4096",
+            "port": "1"
+        }
+    }
+  },
+  {
+    "name": "websrv",
+    "cpus": 2,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.71", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2509, "auto_correct": false }
+    ],
+    "memory": 1024,
+    "no_share": true
+  },
+  {
+    "name": "monitor",
+    "cpus": 2,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.72", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2510, "auto_correct": false },
+      { "guest": 3000, "host": 2802, "auto_correct": false }
+    ],
+    "memory": 1280,
+    "no_share": true
+  },
+  {
+    "name": "elk",
+    "cpus": 4,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.73", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2511, "auto_correct": false },
+      { "guest": 5601, "host": 2801, "auto_correct": false }
+    ],
+    "memory": 8192,
+    "no_share": true
+  },
+  {
+    "name": "backup",
+    "cpus": 2,
+    "gui": false,
+    "box": "fedora/40",
+    "private_network":
+    [
+      { "ip": "192.168.0.74", "adapter": 2, "netmask": "255.255.255.192", "virtualbox__intnet": "intnet" }
+    ],
+    "forward_port":
+    [
+      { "guest": 22, "id": "ssh", "host": 2512, "auto_correct": false }
+    ],
+    "memory": 1024,
+    "no_share": true
+  }
+]
