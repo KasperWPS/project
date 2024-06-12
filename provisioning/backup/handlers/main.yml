@@ -1,0 +1,18 @@
+---
+# handlers file for backup
+
+- name: Enable and start backup timer
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+    enabled: true
+  with_items:
+    - backup.timer
+    - backup-sql.timer
+    - backup-elk.timer
+
+- name: Enable and start backup-sql timer on mysql-replica
+  ansible.builtin.service:
+    name: backup-sql.timer
+    state: restarted
+    enabled: true

@@ -1,0 +1,6 @@
+[Unit]
+Description=Backup www directory
+
+[Service]
+Type=oneshot
+ExecStart=/opt/backup.sh

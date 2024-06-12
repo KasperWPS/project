@@ -1,0 +1,11 @@
+[elasticsearch-8]
+name=Elasticsearch-8
+baseurl=file:///var/www/repo/elasticsearch-8/
+enabled=1
+countme=1
+metadata_expire=7d
+repo_gpgcheck=0
+type=rpm
+gpgcheck=1
+gpgkey=file:///var/www/repo/elasticsearch-8/GPG-KEY-elasticsearch
+skip_if_unavailable=False

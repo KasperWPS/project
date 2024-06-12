@@ -1,0 +1,11 @@
+[Unit]
+Description=Run backup script every 12 hours
+Requires=backup-sql.service
+
+[Timer]
+AccuracySec=1h
+OnUnitActiveSec=12h
+Unit=backup-sql.service
+
+[Install]
+WantedBy=multi-user.target

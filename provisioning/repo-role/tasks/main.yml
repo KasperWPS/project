@@ -1,0 +1,87 @@
+---
+# tasks file for repo-role
+
+- name: Create /var/www/repo directory
+  ansible.builtin.file:
+    path: /var/www/repo
+    state: directory
+    mode: '0755'
+  when: ansible_hostname == 'repo'
+
+- name: Mount an NFS volume
+  ansible.posix.mount:
+    src: 10.111.177.108:/export/backup/fedora
+    path: /var/www/repo
+    opts: rw,sync,hard
+    state: mounted
+    fstype: nfs
+  when: ansible_hostname == 'repo'
+
+- name: Copy repo-files
+  ansible.builtin.copy:
+    src: "repo/{{ item }}"
+    dest: "/etc/yum.repos.d/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+    - fedora.repo
+    - fedora-updates.repo
+    - fedora-cisco-openh264.repo
+    - elasticsearch-8.repo
+  when: ansible_hostname == 'repo'
+
+- name: Copy update-repo shell-script
+  ansible.builtin.copy:
+    src: "repo/update-repo.sh"
+    dest: "/opt"
+    owner: vagrant
+    group: vagrant
+    mode: '0700'
+  when: ansible_hostname == 'repo'
+
+- name: Install nginx
+  ansible.builtin.dnf:
+    name:
+      - nginx
+      - createrepo
+      - git
+    state: present
+    update_cache: true
+  when: ansible_hostname == 'repo'
+
+- name: Add repo-location config Nginx
+  ansible.builtin.copy:
+    src: nginx/repo.conf
+    dest: /etc/nginx/default.d/
+    owner: root
+    group: root
+    mode: '0640'
+  notify:
+    - Start nginx
+  when: ansible_hostname == 'repo'
+
+- name: Configure nftables
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/nftables.conf
+    line: 'include "/etc/nftables.conf"'
+    state: present
+  notify:
+    - Restart nftables service
+  when: ansible_hostname == 'repo'
+
+
+- name: Copy repo-files
+  ansible.builtin.copy:
+    src: "local/{{ item }}"
+    dest: "/etc/yum.repos.d/{{ item }}"
+    owner: root
+    group: root
+    mode: '0640'
+  with_items:
+    - fedora.repo
+    - fedora-updates.repo
+    - fedora-cisco-openh264.repo
+    - KasperWPS.repo
+    - elasticsearch-8.repo
+  when: ansible_hostname != 'repo'

@@ -1,0 +1,18 @@
+{% if ansible_hostname == 'repo' %}
+pool ntp1.vniiftri.ru iburst
+{% else %}
+pool 192.168.0.65 iburst
+{% endif %}
+
+sourcedir /run/chrony-dhcp
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+
+{% if ansible_hostname == 'repo' %}
+allow 192.168.0.0/24
+{% endif %}
+
+ntsdumpdir /var/lib/chrony
+leapsectz right/UTC
+logdir /var/log/chrony

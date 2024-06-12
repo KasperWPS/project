@@ -1,0 +1,115 @@
+---
+# tasks file for backup
+
+- name: Install borgbackup
+  ansible.builtin.dnf:
+    name: borgbackup
+    state: present
+  when: ansible_hostname == "backup"
+
+- name: Install mariadb
+  ansible.builtin.dnf:
+    name: mariadb
+    state: present
+  when: ansible_hostname == "backup"
+
+- name: Create .ssh directory for root
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  when: ansible_hostname == "backup"
+
+- name: Copy key-pair (user borg on 10.111.177.108)
+  ansible.builtin.copy:
+    src: key/id_ed25519
+    dest: /root/.ssh
+    owner: root
+    group: root
+    mode: '0600'
+  when: ansible_hostname == "backup"
+
+- name: Copy scripts
+  ansible.builtin.copy:
+    src: scripts/
+    dest: /opt/
+    owner: root
+    group: root
+    mode: '0700'
+  when: ansible_hostname == "backup"
+
+- name: Copy systemd timer & service backup www directory
+  ansible.builtin.copy:
+    src: systemd/
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Enable and start backup timer
+  when: ansible_hostname == "backup"
+
+- name: Check file restore.run exists
+  ansible.builtin.stat:
+    path: /var/gfs-point/www/restore.run
+  register: stat_restore
+  when: ansible_hostname == "backup"
+
+- name: Restore www directory from latest backup
+  ansible.builtin.shell: /root/restoreLastBackup.sh
+  when:
+    - ansible_hostname == "backup"
+    - stat_restore.stat.exists
+
+- name: Copy backup-sql script to mysql-replica
+  ansible.builtin.template:
+    src: mysql-replica/backup-sql.sh.j2
+    dest: /opt/backup-sql.sh
+    owner: root
+    group: root
+    mode: '0700'
+  when: ansible_hostname == "mysql-replica"
+
+- name: Copy restoreFromSQL script to mysql-source
+  ansible.builtin.template:
+    src: mysql-source/restoreFromSQL.sh.j2
+    dest: /opt/restoreFromSQL.sh
+    owner: root
+    group: root
+    mode: '0700'
+  when: ansible_hostname == "mysql-source"
+
+- name: Copy systemd timer for sql-dump service
+  ansible.builtin.copy:
+    src: mysql-replica/systemd/
+    dest: /etc/systemd/system
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Enable and start backup-sql timer on mysql-replica
+  when: ansible_hostname == "mysql-replica"
+
+- name: Restore last backup elk (snapshots)
+  ansible.builtin.shell: '/opt/restoreLastBackup.sh elk'
+  when:
+    - "'restore backup elk' in ansible_run_tags"
+    - ansible_hostname == "backup"
+
+- name: Restore last backup www
+  ansible.builtin.shell: '/opt/restoreLastBackup.sh www'
+  when:
+    - "'restore backup www' in ansible_run_tags"
+    - ansible_hostname == "backup"
+
+- name: Restore last backup sql
+  ansible.builtin.shell: '/opt/restoreLastBackup.sh sql'
+  when:
+    - "'restore backup sql' in ansible_run_tags"
+    - ansible_hostname == "backup"
+
+- name: Restore last sql
+  ansible.builtin.shell: '/opt/restoreFromSQL.sh'
+  when:
+    - "'restore from sql on mysql-source' in ansible_run_tags"
+    - ansible_hostname == "mysql-source"

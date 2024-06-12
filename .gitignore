@@ -2,3 +2,5 @@
 sata*
 disks/*.vdi
 id_*
+provisioning/secrets.yml
+prod

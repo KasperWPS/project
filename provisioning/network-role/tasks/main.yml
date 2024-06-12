@@ -1,0 +1,55 @@
+---
+# tasks file for network-role
+
+- name: Set up forward packages across routers
+  ansible.posix.sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: '1'
+    state: present
+  when: "'routers' in group_names"
+
+- name: Disable default route on enp0s3 interface
+  community.general.nmcli:
+    conn_name: enp0s3
+    type: ethernet
+    ifname: enp0s3
+    gw4_ignore_auto: true
+    state: present
+  when: (ansible_hostname != "inetRouter" and ansible_hostname != "reverseProxy")
+  notify:
+    - enp0s3 connect
+
+- name: Copy nftables config
+  ansible.builtin.copy:
+    src: files/{{ ansible_hostname }}-nftables.conf
+    dest: /etc/nftables.conf
+  notify:
+    - Restart nftables service
+    - Configure nftables
+  when: ansible_hostname != "backup" and ansible_hostname != "monitor"
+
+- name: Gateway configure on hosts
+  community.general.nmcli:
+    conn_name: System enp0s8
+    type: ethernet
+    ifname: enp0s8
+    gw4: "192.168.0.126"
+    state: present
+  notify:
+    - enp0s8 connect
+  when: (ansible_hostname != "inetRouter" and ansible_hostname != "reverseProxy")
+
+- name: Add route for 192.168.0.64/26 via 192.168.0.5 on reverseProxy
+  community.general.nmcli:
+    conn_name: System enp0s9
+    type: ethernet
+    ifname: enp0s9
+    routes4:
+      - 192.168.0.64/26 192.168.0.5
+    state: present
+  notify:
+    - enp0s9 connect
+  when: (ansible_hostname == "reverseProxy")
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

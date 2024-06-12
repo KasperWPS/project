@@ -1,0 +1,5 @@
+---
+# defaults file for mysql-replica
+# set in main playbook.yml
+mysql_root_password: ''
+mysql_repl_password: ''

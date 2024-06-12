@@ -1,0 +1,12 @@
+[elasticsearch-8]
+name=Elasticsearch-8
+baseurl=http://192.168.0.65/repo/elasticsearch-8/
+enabled=1
+countme=1
+metadata_expire=7d
+repo_gpgcheck=0
+type=rpm
+gpgcheck=1
+gpgkey=http://192.168.0.65/repo/elasticsearch-8/GPG-KEY-elasticsearch
+skip_if_unavailable=False
+

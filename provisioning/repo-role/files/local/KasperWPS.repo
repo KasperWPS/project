@@ -1,0 +1,12 @@
+[KasperWPS]
+name=KasperWPS $releasever - $basearch
+baseurl=http://192.168.0.65/repo/KasperWPS/
+enabled=1
+countme=1
+metadata_expire=7d
+repo_gpgcheck=0
+type=rpm
+gpgcheck=0
+#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-$releasever-$basearch
+skip_if_unavailable=False
+

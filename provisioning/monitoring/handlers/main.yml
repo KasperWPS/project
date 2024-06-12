@@ -1,0 +1,38 @@
+---
+# handlers file for monitoring
+
+- name: Start prometheus
+  ansible.builtin.service:
+    name: prometheus
+    enabled: true
+    state: restarted
+
+- name: Start alertmanager
+  ansible.builtin.service:
+    name: prometheus-alertmanager
+    enabled: true
+    state: restarted
+
+- name: Start grafana
+  ansible.builtin.service:
+    name: grafana-server
+    enabled: true
+    state: restarted
+
+- name: Start prometheus node exporter
+  ansible.builtin.service:
+    name: node_exporter
+    enabled: true
+    state: restarted
+
+- name: Start gluster-exporter
+  ansible.builtin.service:
+    name: gluster-exporter
+    enabled: true
+    state: restarted
+
+- name: Start mysqld_exporter
+  ansible.builtin.service:
+    name: mysqld_exporter
+    enabled: true
+    state: restarted

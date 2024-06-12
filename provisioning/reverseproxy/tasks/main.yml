@@ -1,0 +1,47 @@
+---
+# tasks file for reverseproxy
+
+- name: Install nginx & python3-cryptography
+  ansible.builtin.dnf:
+    name:
+      - nginx
+      - python3-cryptography
+    state: present
+
+- name: Copy nginx reverse-proxy config
+  ansible.builtin.copy:
+    src: nginx/
+    dest: /etc/nginx/conf.d/
+    owner: root
+    group: root
+    mode: '0640'
+  notify:
+    - Restart nginx
+
+- name: Create directory /etc/nginx/ssl
+  ansible.builtin.file:
+    path: /etc/nginx/ssl
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Generate an OpenSSL private key
+  community.crypto.openssl_privatekey:
+    path: /etc/nginx/ssl/private.pem
+    size: 2048
+    type: RSA
+    backup: yes
+
+- name: Generate an OpenSSL Certificate Signing Request
+  community.crypto.openssl_csr:
+    path: /etc/nginx/ssl/key.csr
+    privatekey_path: /etc/nginx/ssl/private.pem
+    common_name: "*.kdev.su"
+
+- name: Generate a Self Signed OpenSSL certificate
+  community.crypto.x509_certificate:
+    path: /etc/nginx/ssl/open.crt
+    privatekey_path: /etc/nginx/ssl/private.pem
+    csr_path: /etc/nginx/ssl/key.csr
+    provider: selfsigned

@@ -1,0 +1,9 @@
+---
+# handlers file for reverseproxy
+
+- name: Restart nginx
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: restarted
+

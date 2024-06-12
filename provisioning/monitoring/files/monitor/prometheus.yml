@@ -1,0 +1,124 @@
+# Sample config for Prometheus.
+
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+      monitor: 'example'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ['localhost:9093']
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "rules.yml"
+  # - "second_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+    scrape_timeout: 5s
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'Prometheus host'
+    # If prometheus-node-exporter is installed, grab stats about the local
+    # machine by default.
+    static_configs:
+      - targets: ['localhost:9100']
+
+  - job_name: 'WebServer'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.71:9100']
+
+  - job_name: 'ReverseProxy'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.6:9100']
+
+  - job_name: 'inetRouter'
+    scrape_interval: 40s
+    static_configs:
+      - targets: ['192.168.0.126:9100']
+
+  - job_name: 'Repository'
+    scrape_interval: 1m
+    static_configs:
+      - targets: ['192.168.0.65:9100']
+
+  - job_name: 'MySQL-source'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.66:9100']
+
+  - job_name: 'MySQL-source MySQL metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.66:9104']
+
+  - job_name: 'MySQL-replica'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.67:9100']
+
+  - job_name: 'MySQL-replica MySQL metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.67:9104']
+
+  - job_name: 'GlusterFS-brick1'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.68:9100']
+
+  - job_name: 'GlusterFS-brick2'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.69:9100']
+
+  - job_name: 'GlusterFS-brick3'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.70:9100']
+
+  - job_name: 'Gluster-exporter on brick1'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.68:9713']
+
+  - job_name: 'Gluster-exporter on brick2'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.69:9713']
+
+  - job_name: 'Gluster-exporter on brick3'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.70:9713']
+
+  - job_name: 'ELK'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.73:9100']
+
+  - job_name: 'Backup server'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.0.74:9100']

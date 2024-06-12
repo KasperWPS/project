@@ -1,0 +1,14 @@
+---
+# handlers file for repo-role
+
+- name: Start nginx
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: restarted
+
+- name: Restart nftables service
+  ansible.builtin.service:
+    name: nftables
+    enabled: true
+    state: restarted

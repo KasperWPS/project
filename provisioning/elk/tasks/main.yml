@@ -1,0 +1,166 @@
+---
+# tasks file for elk
+
+- name: Install Elasticsearch
+  ansible.builtin.dnf:
+    name:
+      - elasticsearch
+    state: present
+  register: elastic_setup
+  when: (ansible_hostname == 'elk')
+
+- name: Install logstash and kibana
+  ansible.builtin.dnf:
+    name:
+      - logstash
+      - kibana
+    state: present
+  when: (ansible_hostname == 'elk')
+
+- name: Create /var/gfs-point/elk directory for snapshot elasticsearch
+  ansible.builtin.file:
+    path: /var/gfs-point/elk
+    state: directory
+    mode: '0775'
+    owner: elasticsearch
+    group: elasticsearch
+  when: (ansible_hostname == 'elk')
+
+- name: State elk password
+  ansible.builtin.stat:
+    path: /home/vagrant/elk
+  register: st
+  when: (ansible_hostname == 'elk')
+
+- name: Copy elasticsearch config
+  ansible.builtin.copy:
+    src: elasticsearch/elasticsearch.yml
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: elasticsearch
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch
+  when: (ansible_hostname == 'elk')
+
+- name: Start elasticsearch service
+  ansible.builtin.service:
+    name: elasticsearch
+    state: started
+    enabled: true
+  when: (ansible_hostname == 'elk')
+
+- name: Generate elastic password
+  ansible.builtin.shell: "{{ item }}"
+  with_items:
+    - 'res=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic -s); echo "elastic ${res}" >> /home/vagrant/elk'
+    - 'res=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana_system -s); echo "kibana_system ${res}" >> /home/vagrant/elk'
+  when:  ansible_hostname == 'elk' and (not st.stat.exists)
+#  debugger: always
+
+- name: Get password elastic user
+  ansible.builtin.shell: "cat /home/vagrant/elk | grep elastic | awk '{ print $2 }'"
+  register: elastic_password
+  changed_when: false
+  when: (ansible_hostname == 'elk')
+
+- name: Get password kibana_system user
+  ansible.builtin.shell: "cat /home/vagrant/elk | grep kibana_system | awk '{ print $2 }'"
+  register: kibana_system_password
+  changed_when: false
+  when: (ansible_hostname == 'elk')
+
+# Может сменится UID пользователя при новой установке (разворачивание с нуля)
+- name: Recursively change ownership /var/gfs-point/elk
+  ansible.builtin.shell: "chown -R elasticsearch:elasticsearch /var/gfs-point/elk"
+  when:
+    - ansible_hostname == 'elk'
+    - elastic_setup is changed
+
+- name: Add my-repository snapshots for Elasticsearch
+  ansible.builtin.shell: "curl --cacert /etc/elasticsearch/certs/http_ca.crt -u elastic:{{ elastic_password.stdout }} -XPUT https://localhost:9200/_snapshot/my_repo -H \"Content-Type: application/json\" -d '{\"type\": \"fs\",\"settings\": {\"location\": \"/var/gfs-point/elk\"}}'"
+  when:
+    - ansible_hostname == 'elk'
+    - elastic_setup is changed
+
+- name: Add policy snapshots for Elasticsearch
+  ansible.builtin.shell: "curl --cacert /etc/elasticsearch/certs/http_ca.crt -u elastic:{{ elastic_password.stdout }} -XPUT https://localhost:9200/_slm/policy/everyday-snapshot -H \"Content-Type: application/json\" -d '{\"schedule\": \"0 0 1 * * ?\",\"name\": \"<everyday-{now/d}>\",\"repository\": \"my_repo\",\"config\": {\"indices\": [\"*\"]},\"retention\": {\"expire_after\": \"7d\",\"min_count\": 10,\"max_count\": 20}}'"
+  when:
+    - ansible_hostname == 'elk'
+    - elastic_setup is changed
+
+- name: Copy logstash config
+  ansible.builtin.template:
+    src: logstash/logstash.yml
+    dest: /etc/logstash
+    owner: root
+    group: logstash
+    mode: '0640'
+  notify: Restart logstash
+  when: (ansible_hostname == 'elk')
+
+- name: Copy logstash conf.d
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/etc/logstash/conf.d/{{ item | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: logstash
+    mode: '0640'
+  with_items:
+    - logstash/conf.d/filter.conf
+    - logstash/conf.d/input.conf
+    - logstash/conf.d/output.conf.j2
+  notify: Restart logstash
+  when: (ansible_hostname == 'elk')
+
+- name: Copy kibana config
+  ansible.builtin.template:
+    src: kibana/kibana.yml.j2
+    dest: /etc/kibana/kibana.yml
+    owner: root
+    group: kibana
+    mode: '0660'
+  notify: Restart kibana
+  when: (ansible_hostname == 'elk')
+
+- name: Install filebeat
+  ansible.builtin.dnf:
+    name: filebeat
+    state: present
+  when: (ansible_hostname != 'elk')
+
+- name: Configure filebeat
+  ansible.builtin.template:
+    src: filebeat/filebeat.yml.j2
+    dest: /etc/filebeat/filebeat.yml
+    owner: root
+    group: root
+    mode: '0640'
+  notify: Restart filebeat
+  when: (ansible_hostname != 'elk')
+
+- name: Configure filebeat. Copy nginx module
+  ansible.builtin.template:
+    src: filebeat/modules.d/nginx.yml
+    dest: /etc/filebeat/modules.d/nginx.yml
+    owner: root
+    group: root
+    mode: '0640'
+  notify: Restart filebeat
+  when:
+    - ansible_hostname != 'elk'
+    - "'nginx' in elk"
+
+- name: Configure filebeat. Copy system module
+  ansible.builtin.template:
+    src: filebeat/modules.d/system.yml
+    dest: /etc/filebeat/modules.d/system.yml
+    owner: root
+    group: root
+    mode: '0640'
+  notify: Restart filebeat
+  when:
+    - ansible_hostname != 'elk'
+    - "'system' in elk"
+
+
+

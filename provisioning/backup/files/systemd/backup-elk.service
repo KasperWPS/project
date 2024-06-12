@@ -1,0 +1,7 @@
+[Unit]
+Description=Backup elk directory on glusterfs mount-point
+
+
+[Service]
+Type=oneshot
+ExecStart=/opt/backup-elk.sh

@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+backup_dir=/var/gfs-point/sql/
+last_backup=$(ls -t ${backup_dir}*.sql 2> /dev/null | head -n1)
+
+if [[ -f ${last_backup} ]]; then
+  echo "Restore SQL from ${last_backup}"
+  mariadb -hlocalhost -uroot -p{{ mysql_root_password }} < ${last_backup}
+fi

@@ -1,0 +1,19 @@
+
+reverseProxy ansible_host=127.0.0.1 ansible_port=2501 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa elk='["reverseProxy", "nginx", "system"]'
+repo         ansible_host=127.0.0.1 ansible_port=2503 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.65 elk='["nginx", "system"]'
+websrv       ansible_host=127.0.0.1 ansible_port=2509 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.71 elk='["websrv", "nginx", "system"]'
+monitor      ansible_host=127.0.0.1 ansible_port=2510 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.72 elk='["system"]'
+elk          ansible_host=127.0.0.1 ansible_port=2511 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.73
+backup       ansible_host=127.0.0.1 ansible_port=2512 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.74 elk='["system"]'
+
+[mysql]
+mysql-source  ansible_host=127.0.0.1 ansible_port=2504 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa server_id=13 host_ip=192.168.0.66 elk='["system"]'
+mysql-replica ansible_host=127.0.0.1 ansible_port=2505 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa server_id=14 host_ip=192.168.0.67 elk='["system"]'
+
+[glusterfs]
+brick1 ansible_host=127.0.0.1 ansible_port=2506 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.68 elk='["system"]'
+brick2 ansible_host=127.0.0.1 ansible_port=2507 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.69 elk='["system"]'
+brick3 ansible_host=127.0.0.1 ansible_port=2508 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.70 elk='["system"]'
+
+[routers]
+inetRouter ansible_host=127.0.0.1 ansible_port=2502 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_keys/vagrant.key.rsa host_ip=192.168.0.126 elk='["system"]'

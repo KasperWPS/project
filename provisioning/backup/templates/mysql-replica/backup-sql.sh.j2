@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+path_backup=/var/gfs-point/sql/
+
+date_backup=$(date '+%Y%m%d-%H%M%S')
+
+if [ ! -d ${path_backup} ]; then
+  mkdir $path_backup
+fi
+
+mariadb-dump -hlocalhost -uroot -p{{ mysql_root_password }} --all-databases --add-drop-table --add-locks \
+             --create-options --disable-keys --extended-insert --single-transaction --quick \
+             --set-charset --events --routines --triggers --flush-privileges --system=users > ${path_backup}${date_backup}.sql
+
+sed -i "s/^CREATE USER/CREATE USER IF NOT EXISTS/gm" ${path_backup}${date_backup}.sql
+
+# Добавить алертинг $?

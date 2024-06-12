@@ -1,0 +1,17 @@
+---
+# tasks file for ntp-server
+- name: Install chrony
+  ansible.builtin.dnf:
+    name: chrony
+    state: present
+
+- name: Copy template Chrony config
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    mode: '0644'
+    owner: root
+    group: root
+  notify:
+    - Restart chronyd
+

@@ -1,0 +1,160 @@
+- name: Project OTUS
+  hosts: all
+  become: true
+
+  tasks:
+
+- name: Deploy repo-server
+  hosts: repo
+  become: yes
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - monitoring
+    - elk
+  tags:
+    - deploy repo
+
+- name: Deploy inetRouter
+  hosts: inetRouter
+  become: yes
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - monitoring
+    - elk
+  tags:
+    - deploy inetRouter
+
+- name: Deploy reverseProxy
+  hosts: reverseProxy
+  become: yes
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - reverseproxy
+    - monitoring
+    - elk
+  tags:
+    - deploy reverseProxy
+
+- name: Deploy MySQL source
+  hosts: mysql-source
+  become: yes
+  vars_files:
+    - secrets.yml
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - mysql
+    - monitoring
+    - glusterfs
+    - backup
+  tags:
+    - deploy mysql-source
+    - deploy mysql
+
+- name: Deploy MySQL replica
+  hosts: mysql-replica
+  become: yes
+  vars_files:
+    - secrets.yml
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - glusterfs
+    - backup
+    - mysql
+    - monitoring
+  tags:
+    - deploy mysql-replica
+    - deploy mysql
+
+- name: Set up replication MySQL
+  hosts: mysql-source, mysql-replica
+  become: yes
+  vars_files:
+    - secrets.yml
+  roles:
+    - mysql-replica
+  tags:
+    - Set up replica
+
+- name: Deploy GlusterFS
+  hosts: brick1, brick2, brick3
+  become: true
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - glusterfs
+    - monitoring
+    - elk
+  tags:
+    - deploy glusterfs
+
+- name: Deploy web-server
+  hosts: websrv
+  become: yes
+  vars_files:
+    - secrets.yml
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - glusterfs
+#    - geerlingguy.docker
+    - webserver
+    - monitoring
+    - elk
+  tags:
+    - deploy websrv
+
+- name: Deploy monitoring
+  hosts: monitor
+  become: yes
+  vars_files:
+    - secrets.yml
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - monitoring
+    - elk
+  tags:
+    - deploy monitoring
+
+- name: Deploy elk
+  hosts: elk
+  become: yes
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - monitoring
+    - glusterfs
+    - elk
+  tags:
+    - deploy elk
+
+- name: Deploy backup server
+  hosts: backup
+  become: yes
+  vars_files:
+    - secrets.yml
+  roles:
+    - network-role
+    - repo-role
+    - ntpd
+    - monitoring
+    - glusterfs
+    - backup
+    - elk
+  tags:
+    - deploy backup server
+

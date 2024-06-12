@@ -1,0 +1,6 @@
+[Unit]
+Description=SQL dump MariaDB
+
+[Service]
+Type=oneshot
+ExecStart=/opt/backup-sql.sh

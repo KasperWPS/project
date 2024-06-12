@@ -1,0 +1,29 @@
+[mysqld]
+server-id = {{ server_id }}
+{% if ansible_hostname == 'mysql-source' %}
+report_host = master
+{% else %}
+report_host = slave2
+{% endif %}
+bind-address={{ host_ip }},127.0.0.1
+log_bin = /var/lib/mysql/mariadb-bin
+log_bin_index = /var/lib/mysql/mariadb-bin.index
+relay_log = /var/lib/mysql/relay-bin
+relay_log_index = /var/lib/mysql/relay-bin.index
+skip-name-resolve
+
+{% if ansible_hostname == 'mysql-replica' %}
+# Attention, MariaDB not supported super_read_only
+# so, super user can modified data and destroyed replica-server
+read_only = On
+{% endif %}
+
+log_error = /var/log/mariadb/error.log
+
+# 02-Max connections
+wait-timeout = 60
+max-connections = 500
+
+# GTID replication config
+log-slave-updates = On
+gtid_strict_mode = On

@@ -1,0 +1,4 @@
+---
+# defaults file for mysql
+# set in main playbook.yml
+mysql_root_password: ''

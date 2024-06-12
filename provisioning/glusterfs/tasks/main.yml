@@ -1,0 +1,91 @@
+---
+# tasks file for glusterfs
+
+- name: Install glusterfs-server
+  ansible.builtin.dnf:
+    name:
+      - glusterfs-server
+    state: present
+  when: (ansible_hostname == 'brick1' or ansible_hostname == 'brick2' or ansible_hostname == 'brick3')
+  register: glusterd_installed
+#  notify:
+#    - Start glusterd
+
+- name: Start glusterd
+  ansible.builtin.service:
+    name: glusterd
+    state: restarted
+    enabled: true
+  when: glusterd_installed.changed
+
+- name: Copy disk prepare script
+  ansible.builtin.copy:
+    src: disk-prepare.sh
+    dest: /home/vagrant/disk-prepare.sh
+    owner: root
+    group: root
+    mode: '0700'
+  when: (ansible_hostname == 'brick1' or ansible_hostname == 'brick2' or ansible_hostname == 'brick3')
+  register: disk_prepare
+#  notify: Disk prepare
+
+- name: Disk prepare
+  ansible.builtin.shell: '/home/vagrant/disk-prepare.sh'
+  when: disk_prepare.changed
+
+#- name: Flush handlers
+#  ansible.builtin.meta: flush_handlers
+
+- name: Copy hosts config
+  ansible.builtin.template:
+    src: hosts.j2
+    dest: /etc/hosts
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Create gluster volume gfs
+  gluster.gluster.gluster_volume:
+    state: present
+    name: gfs
+    force: true
+    bricks: /mnt/gfs
+    replicas: 3
+    cluster:
+      - brick1
+      - brick2
+      - brick3
+  run_once: true
+  when: (ansible_hostname == 'brick1' or ansible_hostname == 'brick2' or ansible_hostname == 'brick3')
+
+- name: Start gluster volume gfs
+  gluster.gluster.gluster_volume:
+    state: started
+    name: gfs
+  run_once: true
+  when: (ansible_hostname == 'brick1' or ansible_hostname == 'brick2' or ansible_hostname == 'brick3')
+
+- name: Install glusterfs-client
+  ansible.builtin.dnf:
+    name: glusterfs-client
+    state: present
+  when: (ansible_hostname != 'brick1' and ansible_hostname != 'brick2' and ansible_hostname != 'brick3')
+
+#- name: Print all available facts
+#  ansible.builtin.debug:
+#    var: ansible_facts
+
+- name: Check is mounted /var/gfs-point
+  ansible.builtin.shell: "mount | grep -q '/var/gfs-point' | if [ $? -eq 0 ]; then echo 1; fi"
+  register: ismount
+  changed_when: false
+  when: (ansible_hostname != 'brick1' and ansible_hostname != 'brick2' and ansible_hostname != 'brick3')
+
+- name: Mount glusterfs on /var/gfs-point
+  ansible.posix.mount:
+    src: brick1:gfs
+    path: /var/gfs-point
+    opts: defaults,_netdev,backupvolfile-server=brick2:brick3
+    state: mounted
+    fstype: glusterfs
+  when: (ansible_hostname != 'brick1' and ansible_hostname != 'brick2' and ansible_hostname != 'brick3' and ismount != 1)

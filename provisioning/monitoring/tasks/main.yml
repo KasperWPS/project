@@ -1,0 +1,87 @@
+---
+# tasks file for monitoring
+- name: Install Prometheus
+  ansible.builtin.dnf:
+    name:
+      - golang-github-prometheus
+      - prometheus-alertmanager
+      - grafana
+    state: present
+  notify:
+    - Start prometheus
+    - Start grafana
+  when: ansible_hostname == "monitor"
+
+- name: Copy configs
+  ansible.builtin.copy:
+    src: monitor/{{ item }}
+    dest: /etc/prometheus
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+    - rules.yml
+    - prometheus.yml
+  notify:
+    - Start prometheus
+    - Start grafana
+  when: ansible_hostname == "monitor"
+
+- name: Copy Prometheus alertmanager config
+  ansible.builtin.template:
+    src: alerting/alertmanager.yml.j2
+    dest: /etc/prometheus/alertmanager.yml
+    owner: root
+    group: prometheus
+    mode: '0640'
+  notify: Start alertmanager
+  when: ansible_hostname == "monitor"
+
+- name: Install Prometheus Exporter
+  ansible.builtin.dnf:
+    name:
+      - node-exporter
+    state: present
+  notify:
+    - Start prometheus node exporter
+
+- name: Install gluster-exporter
+  ansible.builtin.dnf:
+    name:
+      - gluster-exporter
+    state: present
+  when: (ansible_hostname == 'brick1' or ansible_hostname == 'brick2' or ansible_hostname == 'brick3')
+  notify:
+    - Start gluster-exporter
+
+- name: Create mysql user exporter for mysqld_exporter (Prometeus)
+  community.mysql.mysql_user:
+    name: exporter
+    host: '127.0.0.1'
+    resource_limits:
+      MAX_USER_CONNECTIONS: 3
+    check_implicit_admin: true
+    password: "{{ mysql_root_password }}"
+    priv: '*.*:PROCESS, REPLICATION CLIENT, REPLICATION SLAVE, SLAVE MONITOR' # https://github.com/prometheus/mysqld_exporter/issues/640
+    login_unix_socket: /var/lib/mysql/mysql.sock
+    state: present
+  when: ansible_hostname == 'mysql-source'
+
+- name: Copy .my.cnf (user and password from exporter)
+  ansible.builtin.template:
+    src: mysqld_exporter/.my.cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: '0600'
+  when: ansible_hostname == 'mysql-source' or ansible_hostname == 'mysql-replica'
+
+- name: Install mysqld_exporter
+  ansible.builtin.dnf:
+    name:
+      - mysqld_exporter
+    state: present
+  when: ansible_hostname == 'mysql-source' or ansible_hostname == 'mysql-replica'
+  notify:
+    - Start mysqld_exporter
+

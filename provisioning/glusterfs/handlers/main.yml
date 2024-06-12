@@ -1,0 +1,11 @@
+---
+# handlers file for glusterfs
+#- name: Start glusterd
+#  ansible.builtin.service:
+#    name: glusterd
+#    state: restarted
+#    enabled: true
+
+#- name: Disk prepare
+#  ansible.builtin.shell: '/home/vagrant/disk-prepare.sh'
+

@@ -1,0 +1,7 @@
+[Unit]
+Description=Backup sql directory on glusterfs mount-point
+
+
+[Service]
+Type=oneshot
+ExecStart=/opt/backup-sql.sh

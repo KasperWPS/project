@@ -1,0 +1,9 @@
+---
+# handlers file for ntp-server
+
+- name: Restart chronyd
+  ansible.builtin.service:
+    name: chronyd
+    state: restarted
+    enabled: true
+

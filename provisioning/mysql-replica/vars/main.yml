@@ -1,0 +1,4 @@
+---
+# vars file for mysql-replica
+var_src: "{{ 'mysql-replica' if 'restore from replica' in ansible_run_tags else 'mysql-source' }}"
+var_dest: "{{ 'mysql-source' if 'restore from replica' in ansible_run_tags else 'mysql-replica' }}"

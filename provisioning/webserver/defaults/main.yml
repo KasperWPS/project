@@ -1,0 +1,5 @@
+---
+# defaults file for webserver
+
+nextcloud_password: ''
+mysql_root_password: ''

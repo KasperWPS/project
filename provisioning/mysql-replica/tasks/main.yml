@@ -1,0 +1,187 @@
+---
+# tasks file for mysql-replica
+
+- name: Install PyMySQL
+  ansible.builtin.dnf:
+    name: python3-PyMySQL
+    state: present
+  when: ansible_hostname == 'mysql-source' or ansible_hostname == 'mysql-source'
+
+- name: Debug vars
+  debug:
+    msg: "var_src: {{ var_src }}; var_dest: {{ var_dest }};"
+
+- name: Create mysql user repl
+  community.mysql.mysql_user:
+    name: repl
+    check_implicit_admin: true
+    password: "{{ mysql_repl_password }}"
+    priv: '*.*:REPLICATION SLAVE'
+#    login_user: root
+#    login_password: "{{ mysql_root_password }}"
+#    login_host: 'localhost'
+    host: '%'
+    login_unix_socket: /var/lib/mysql/mysql.sock
+    state: present
+  when: ansible_hostname == 'mysql-source'
+
+- name: Generate SSH key-pair for mysql-source
+  ansible.builtin.user:
+    name: vagrant
+    generate_ssh_key: yes
+    ssh_key_type: rsa
+    ssh_key_bits: 2048
+    force: no
+  when: ansible_hostname == "mysql-source"
+
+- name: Generate SSH key-pair for mysql-replica
+  ansible.builtin.user:
+    name: vagrant
+    generate_ssh_key: yes
+    ssh_key_type: rsa
+    ssh_key_bits: 2048
+    force: no
+  when: ansible_hostname == "mysql-replica"
+
+- name: Fetch public ssh key mysql-source
+  ansible.builtin.shell: cat /home/vagrant/.ssh/id_rsa.pub
+  register: ssh_keys
+  when: ansible_hostname == "mysql-source"
+
+- name: Transfer public key to mysql-replica
+  delegate_to: mysql-replica
+  authorized_key:
+    key: "{{ ssh_keys.stdout }}"
+    comment: "{{ ansible_hostname }}"
+    user: vagrant
+  when: ansible_hostname == "mysql-source"
+
+- name: Fetch public ssh keys mysql-replica
+  ansible.builtin.shell: cat /home/vagrant/.ssh/id_rsa.pub
+  register: ssh_keys
+  when: ansible_hostname == "mysql-replica"
+
+- name: Transfer public key to mysql-source
+  delegate_to: mysql-source
+  authorized_key:
+    key: "{{ ssh_keys.stdout }}"
+    comment: "{{ ansible_hostname }}"
+    user: vagrant
+  when: ansible_hostname == "mysql-replica"
+
+- name: Fetch public ssh key mysql-replica
+  ansible.builtin.shell: 'cat /etc/ssh/ssh_host_rsa_key.pub'
+  register: ssh_keys
+  when: ansible_hostname == "mysql-replica"
+
+- name: Add to mysql-source known_hosts open cert from mysql_replica
+  delegate_to: mysql-source
+  ansible.builtin.lineinfile:
+    path: /home/vagrant/.ssh/known_hosts
+    line: "192.168.0.67 {{ ssh_keys.stdout }}"
+    create: yes
+  when: ansible_hostname == "mysql-replica"
+
+- name: Fetch public ssh key mysql-source
+  ansible.builtin.shell: 'cat /etc/ssh/ssh_host_rsa_key.pub'
+  register: ssh_keys
+  when: ansible_hostname == "mysql-source"
+
+- name: Add to mysql-replica known_hosts open cert from mysql_source
+  delegate_to: mysql-replica
+  ansible.builtin.lineinfile:
+    path: /home/vagrant/.ssh/known_hosts
+    line: "192.168.0.66 {{ ssh_keys.stdout }}"
+    create: yes
+  when: ansible_hostname == "mysql-source"
+
+- name: Create backup directory on mysql-source
+  ansible.builtin.file:
+    owner: vagrant
+    group: vagrant
+    path: /backup
+    state: directory
+    mode: '0750'
+  when: ansible_hostname == var_src
+
+- name: Off slave in replica
+  ansible.builtin.shell: mysql -uroot -p'{{ mysql_root_password }}' -e "{{ item }}"
+  with_items:
+    - "STOP ALL SLAVES;"
+    - "RESET SLAVE ALL;"
+  when:
+    - ansible_hostname == "mysql-replica"
+    - "'restore from replica' in ansible_run_tags"
+
+- name: Mariabackup running
+  ansible.builtin.shell: 'mariabackup --defaults-file=/etc/my.cnf.d/mariadb-server.cnf --backup --compress --target-dir=/backup/full_backup --user=root --password={{ mysql_root_password }} --parallel=$(nproc)'
+  when: ansible_hostname == var_src
+
+- name: Change owner files
+  ansible.builtin.file:
+    dest: /backup
+    owner: vagrant
+    group: vagrant
+    recurse: yes
+
+- name: "Delete backup directory on destination ({{ var_dest }})"
+  ansible.builtin.file:
+    dest: /backup
+    state: absent
+  when: ansible_hostname == var_dest
+
+- name: "Create backup directory on destination ({{ var_dest }})"
+  ansible.builtin.file:
+    owner: vagrant
+    group: vagrant
+    path: /backup
+    state: directory
+    mode: '0750'
+  when: ansible_hostname == var_dest
+
+- name: Copy backup to mysql-replica
+  become_user: vagrant
+  ansible.builtin.shell: 'scp -rp /backup/full_backup vagrant@192.168.0.67:/backup/'
+  when:
+    - ansible_hostname == "mysql-source"
+    - "not 'restore from replica' in ansible_run_tags"
+
+- name: Copy backup to mysql-source
+  become_user: vagrant
+  ansible.builtin.shell: 'scp -rp /backup/full_backup vagrant@192.168.0.66:/backup/'
+  when: 
+    - ansible_hostname == "mysql-replica"
+    - "'restore from replica' in ansible_run_tags"
+
+- name: "Copy restore_backup shell-script to {{ var_dest }}"
+  ansible.builtin.copy:
+    src: restore_backup.sh
+    dest: /home/vagrant/
+    owner: root
+    group: root
+    mode: '0700'
+  when: ansible_hostname == var_dest
+
+- name: Run restore_backup
+  ansible.builtin.shell: /home/vagrant/restore_backup.sh
+  when: ansible_hostname == var_dest
+
+- name: Delete local backup
+  ansible.builtin.file:
+    dest: /backup
+    state: absent
+  when: ansible_hostname == var_src
+
+- name: Get GTID on mysql-replica
+  ansible.builtin.shell: cat /var/lib/mysql/xtrabackup_info | grep -i GTID | sed -E "s/.+GTID.+'([0-9-]+)'/\1/"
+  register: gtid
+  when: ansible_hostname == "mysql-replica"
+
+- name: Start slave on mysql-replica
+  ansible.builtin.shell: mysql -uroot -p'{{ mysql_root_password }}' -e "{{ item }}"
+  when: ansible_hostname == "mysql-replica"
+  with_items:
+    - "stop slave; reset slave; reset slave all; reset master; set global gtid_slave_pos='{{ gtid.stdout }}';"
+    - "change master to master_host='192.168.0.66', master_port=3306, master_user='repl', master_password='{{ mysql_repl_password }}', master_connect_retry=10, master_use_gtid=slave_pos;"
+    - "set global read_only=1;"
+    - "start slave;"

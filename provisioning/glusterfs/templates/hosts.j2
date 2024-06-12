@@ -1,0 +1,20 @@
+# Loopback entries; do not change.
+# For historical reasons, localhost precedes localhost.localdomain:
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+# See hosts(5) for proper format and other examples:
+# 192.168.1.10 foo.example.org foo
+# 192.168.1.13 bar.example.org bar
+127.0.1.1 {{ ansible_hostname }}
+
+{% if ansible_hostname != 'brick1' %}
+192.168.0.68 brick1
+{% endif %}
+
+{% if ansible_hostname != 'brick2' %}
+192.168.0.69 brick2
+{% endif %}
+
+{% if ansible_hostname != 'brick3' %}
+192.168.0.70 brick3
+{% endif %}

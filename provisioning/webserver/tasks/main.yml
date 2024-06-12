@@ -1,0 +1,69 @@
+---
+# tasks file for webserver
+
+- name: Install nginx
+  ansible.builtin.dnf:
+    name:
+      - nginx
+      - php-fpm
+      - php-gd
+      - php-mbstring
+      - php-xml
+      - php-pdo
+      - php-pecl-zip
+      - php-opcache
+      - php-mysqlnd
+      - php-process
+      - php-cli
+    state: present
+
+- name: Create /var/gfs-point/www directory
+  ansible.builtin.file:
+    path: /var/gfs-point/www
+    state: directory
+    mode: '0775'
+    owner: nginx
+    group: nginx
+  notify:
+    - Restore mark
+
+- name: Create mysql user nextcloud
+  delegate_to: mysql-source
+  community.mysql.mysql_user:
+    name: nextcloud
+    check_implicit_admin: true
+    password: "{{ nextcloud_password }}"
+    priv: 'nextcloud.*:ALL PRIVILEGES'
+#    login_user: root
+#    login_password: "{{ mysql_root_password }}"
+#    login_host: 'localhost'
+    host: '192.168.0.71'
+    login_unix_socket: /var/lib/mysql/mysql.sock
+    state: present
+
+- name: Copy config nginx
+  ansible.builtin.copy:
+    src: nginx/01-websrv.kdev.su.conf
+    dest: /etc/nginx/conf.d/
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart nginx
+
+- name: Copy config php-fpm
+  ansible.builtin.copy:
+    src: php-fpm.d/www.conf
+    dest: /etc/php-fpm.d/
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart php-fpm
+
+- name: Change owner & group /var/lib/php
+  ansible.builtin.file:
+    dest: /var/lib/php
+    owner: nginx
+    group: nginx
+    recurse: yes

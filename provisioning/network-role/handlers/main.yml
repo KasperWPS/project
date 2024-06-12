@@ -1,0 +1,23 @@
+---
+# handlers file for network-role
+
+- name: Configure nftables
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/nftables.conf
+    line: 'include "/etc/nftables.conf"'
+    state: present
+
+- name: Restart nftables service
+  ansible.builtin.service:
+    name: nftables
+    enabled: true
+    state: restarted
+
+- name: enp0s3 connect
+  command: nmcli connection up 'enp0s3'
+
+- name: enp0s8 connect
+  command: nmcli connection up 'System enp0s8'
+
+- name: enp0s9 connect
+  command: nmcli connection up 'System enp0s9'
