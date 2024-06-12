@@ -28,8 +28,9 @@
 - [repo](#repo)
 - [Websrv](#websrv)
 - [GlusterFS](#glusterfs)
-- [MariaDB](#mariadb-source)
+- [MariaDB](#mariadb)
 - [Prometheus](#monitor)
+- [ELK](#elk)
 - [Восстановление из бэкапа www](#backup_www)
 - [Восстановление mysql-source из реплики](#sourceFromReplica)
 
@@ -47,17 +48,22 @@
 
 ## Образ (box) хостов
 Для стэнда подготовлен образ виртуальной машины на основе Fedora Server 40. В образе отключен SELinux, firewalld, диск разбит автоматически (XFS, LVM), загрузка EFI, SWAP-раздел отсутствует, добавлен флаг ядра clk_ignore_unused, удалены флаги rhgb & quiet. Предустановлено следующее ПО:
+
 - NetworkManager-initscripts-ifcfg-rh (для функционирования штатного механизма конфигурирования сетевых интерфейсов Vagrant)
 - mc
 - tcpdump
+
 А также прописан vagrant insecure public key, создан **пользователь vagrant** с **паролем vagrant**
 
 ## Описание хостов
 
-### reverseProxy
+### <a id="reverseProxy">reverseProxy</a>
 
 - Network:
-  - enp0s3; 10.0.2.15/24. Смотрит наружу. Проброшены порты с хоста 8080 -> 80; 8443 -> 443; 2501 -> 22
+  - enp0s3; 10.0.2.15/24. Смотрит наружу. Проброшены порты с хоста:
+    - 2501 -> 22
+    - 8080 -> 80 (редирект на 443)
+    - 8443 -> 443
   - enp0s9; 192.168.0.6/30. Смотрит внутрь, на роутер (+ firewall)
 
 - nftables
@@ -86,7 +92,7 @@ vagrant up reverseProxy
 ansible-playbook provisioning/playbook.yml --tags="deploy reverseProxy"
 ```
 
-## inetRouter
+## <a id="inetRouter">inetRouter</a>
 
 - Network:
   - enp0s3; 10.0.2.15/24. Смотрит наружу. Проброшен порт с хоста 2502 -> 22
@@ -96,7 +102,7 @@ ansible-playbook provisioning/playbook.yml --tags="deploy reverseProxy"
     - Из внутренней сети наружу без ограничений
     - От reverseProxy (192.168.0.6) до
       - 192.168.0.71:80 (websrv)
-      - 192.168.0.76:5044 (filebeat - logstash)
+      - 192.168.0.73:5044 (filebeat - logstash)
       - 192.168.0.65:80 (local repository)
 
 - nftables
@@ -128,6 +134,7 @@ ansible-playbook provisioning/playbook.yml --tags="deploy inetRouter"
 Для данного проекта написаны скрипты для сборки и размещены в локальном репозитории следующие пакеты:
   - gluster-exporter (https://github.com/KasperWPS/gluster-exporter)
   - mysqld_exporter (https://github.com/KasperWPS/mysqld_exporter)
+  - prometheus-alertmanager (https://github.com/KasperWPS/alertmanager_rpm)
 
 Добавлен локальный репозиторий для разворачивания ELK-стэка (elasticsearch-8.x)
 
@@ -171,7 +178,7 @@ vagrant up repo
 ansible-playbook provisioning/playbook.yml --tags="deploy repo"
 ```
 
-## Websrv
+## <a id="Websrv">Websrv</a>
 
 - Network:
   - enp0s3; 10.0.2.15/24. Смотрит наружу. Проброшен порт с хоста 2509 -> 22. Отключено применение маршрута по-умолчанию от dhcp.
@@ -223,9 +230,9 @@ ansible-playbook provisioning/playbook.yml --tags="deploy websrv"
 
 - Network (на каждом хосте):
   - enp0s3; 10.0.2.15/24. Смотрит наружу. Отключено применение маршрута по-умолчанию от dhcp. Проброшен порт с хоста
-    - 2506 -> 22. brick1.
-    - 2507 -> 22. brick2.
-    - 2508 -> 22. brick3.
+    - 2506 -> 22; brick1
+    - 2507 -> 22; brick2
+    - 2508 -> 22; brick3
   - enp0s8;
     - 192.168.0.68/26 - brick1. Internal network
     - 192.168.0.69/26 - brick2. Internal network
@@ -235,7 +242,8 @@ ansible-playbook provisioning/playbook.yml --tags="deploy websrv"
   - 22 для управления vagrant+ansible;
   - 9100 - с ip 192.168.0.72 (мониторинг)
   - 9713 - с ip 192.168.0.72 (мониторинг Gluster-exporter)
-  - 24007-24008; 49152-49156 TCP - GlusterFS с адресов 192.168.0.68-192.168.0.71, 192.168.0.73-192.168.0.74 (brick1, brick2, brick3, elk, backup)
+  - 24007-24008; 49152-60999 TCP - GlusterFS с адресов 192.168.0.73, 192.168.0.74, 192.168.0.71, 192.168.0.66, 192.168.0.67 (elk, backup, websrv, mysql-source, mysql-replica)
+  - 192.168.0.68-192.168.0.70 - brick1, brick2, brick3
   - ICMP
 
 На всех хостах GlusterFS подключены виртуальные диски объемом 4096 Мб, создан раздел с файловой системой XFS и смонтированы в /mnt/gfs
@@ -334,7 +342,7 @@ cd /
 borg extract borg@10.111.177.108:www::2024-06-12_16:21:21
 ```
 
-## <a id="mariadb-source">MariaDB</a>
+## <a id="mariadb">MariaDB</a>
 
 СУБД
 
@@ -353,23 +361,41 @@ borg extract borg@10.111.177.108:www::2024-06-12_16:21:21
 ```bash
 vagrant destroy mysql-replica -f
 ```
+
 ```bash
 vagrant up mysql-replica
 ```
+
 ```bash
 ansible-playbook provisioning/playbook.yml --vault-id @prod --tags="deploy mysql-replica, Set up replica"
 ```
 
-- <a id="sourceFromReplica">Уничтожить и восстановление мастер из реплики</a>
+- <a id="sourceFromReplica">Уничтожение и восстановление мастера из реплики</a>
 
 ```bash
 vagrant destroy mysql-source -f
 ```
+
 ```bash
 vagrant up mysql-source
 ```
+
 ```bash
 ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy mysql-source, Set up replica, restore from replica"
+```
+
+- Уничтожение мастера и реплики с восстановлением из sql-dump'а
+
+```bash
+vagrant destroy mysql-source mysql-replica -f
+```
+
+```bash
+vagrant up mysql-source mysql-replica
+```
+
+```bash
+ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy mysql-source, restore from sql on mysql-source, deploy mysql-replica, Set up replica"
 ```
 
 ## <a id="monitor">Prometheus</a>
