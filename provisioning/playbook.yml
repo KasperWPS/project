@@ -68,7 +68,6 @@
     - repo-role
     - ntpd
     - glusterfs
-    - backup
     - mysql
     - monitoring
   tags:
@@ -81,6 +80,7 @@
   vars_files:
     - secrets.yml
   roles:
+    - backup
     - mysql-replica
   tags:
     - Set up replica

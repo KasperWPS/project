@@ -5,10 +5,20 @@
     name:
       - golang-github-prometheus
       - prometheus-alertmanager
-      - grafana
     state: present
   notify:
     - Start prometheus
+  when: ansible_hostname == "monitor"
+
+- name: Install Grafana
+  ansible.builtin.dnf:
+    name:
+      - grafana
+    state: present
+  notify:
+    - Stop grafana
+    - Extract grafana config
+    - Change owner grafana config
     - Start grafana
   when: ansible_hostname == "monitor"
 

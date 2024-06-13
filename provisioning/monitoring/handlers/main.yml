@@ -13,6 +13,24 @@
     enabled: true
     state: restarted
 
+- name: Stop grafana
+  ansible.builtin.service:
+    name: grafana-server
+    state: stopped
+
+- name: Extract grafana config
+  ansible.builtin.unarchive:
+    src: grafana.tgz
+    dest: /
+
+- name: Change owner grafana config
+  ansible.builtin.file:
+    path: /var/lib/grafana
+    state: directory
+    recurse: yes
+    owner: grafana
+    group: grafana
+
 - name: Start grafana
   ansible.builtin.service:
     name: grafana-server

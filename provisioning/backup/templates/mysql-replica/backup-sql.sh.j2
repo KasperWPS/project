@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 path_backup=/var/gfs-point/sql/
 
 date_backup=$(date '+%Y%m%d-%H%M%S')
@@ -14,6 +12,11 @@ mariadb-dump -hlocalhost -uroot -p{{ mysql_root_password }} --all-databases --ad
              --create-options --disable-keys --extended-insert --single-transaction --quick \
              --set-charset --events --routines --triggers --flush-privileges --system=users > ${path_backup}${date_backup}.sql
 
+if [ $? -ne 0 ]; then
+  rm -f ${path_backup}${date_backup}.sql
+  exit 2
+fi
+
 sed -i "s/^CREATE USER/CREATE USER IF NOT EXISTS/gm" ${path_backup}${date_backup}.sql
 
-# Добавить алертинг $?
+# Добавить алертинг

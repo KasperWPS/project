@@ -11,7 +11,6 @@
     - [x] Backup www
     - [x] Backup sql
     - [x] Backup snapshots Elasticsearch
-    - [ ] Backup Prometheus
   - [x] Backup server
 - [x] Дополнительно реализовано:
   - [x] Репликация СУБД
@@ -29,7 +28,7 @@
 - [Websrv](#websrv)
 - [GlusterFS](#glusterfs)
 - [MariaDB](#mariadb)
-- [Prometheus](#monitor)
+- [Monitoring](#monitor)
 - [ELK](#elk)
 - [Восстановление из бэкапа www](#backup_www)
 - [Восстановление mysql-source из реплики](#sourceFromReplica)
@@ -89,7 +88,7 @@ vagrant up reverseProxy
 ```
 
 ```bash
-ansible-playbook provisioning/playbook.yml --tags="deploy reverseProxy"
+ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy reverseProxy"
 ```
 
 ## <a id="inetRouter">inetRouter</a>
@@ -123,7 +122,7 @@ vagrant up inetRouter
 ```
 
 ```bash
-ansible-playbook provisioning/playbook.yml --tags="deploy inetRouter"
+ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy inetRouter"
 ```
 
 
@@ -175,7 +174,7 @@ vagrant up repo
 ```
 
 ```bash
-ansible-playbook provisioning/playbook.yml --tags="deploy repo"
+ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy repo"
 ```
 
 ## <a id="Websrv">Websrv</a>
@@ -384,7 +383,7 @@ vagrant up mysql-source
 ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy mysql-source, Set up replica, restore from replica"
 ```
 
-- Уничтожение мастера и реплики с восстановлением из sql-dump'а
+**Уничтожение мастера и реплики с восстановлением из sql-dump'а**
 
 ```bash
 vagrant destroy mysql-source mysql-replica -f
@@ -398,7 +397,9 @@ vagrant up mysql-source mysql-replica
 ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy mysql-source, restore from sql on mysql-source, deploy mysql-replica, Set up replica"
 ```
 
-## <a id="monitor">Prometheus</a>
+## <a id="monitor">Monitoring</a>
+
+Мониторинг реализован с использованием Prometheus, визуализация Grafana.
 
 Alertmanager собран из исходников (в репозитории Fedora старая версия без поддержки Telegram, можно с использованием curl, но практикуюсь в сборке пакетов)
 
@@ -406,7 +407,41 @@ Alertmanager собран из исходников (в репозитории F
 
 На Grafana настроен также алертинг, т.к. версия из дистрибутива использует устаревший API (v1) alertmanager не удалось настроить их совместную работу, использован сервис графаны, alertmanager используется только в алертинге prometheus.
 
+*Бэкап базы данных временных рядов не реализован.* Конфиги Grafana добавлены в архив и распаковываются на серере во время деплоя.
+
+- Уничтожение мониторинга и восстановление
+
+```bash
+vagrant destroy monitor -f
+```
+
+```bash
+vagrant up monitor
+```
+
+```bash
+ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy monitoring"
+```
+
 ## <a id="elk">ELK</a>
 
-Snapshots
+Централизованный сбор логов.
+
+- Настроены снэпшоты в папку на GlusterFS
+- При разворачивании в /home/vagrant/elk кладётся логин и пароль - необходимые для авторизации в Kibana
+
+**Уничтожение и восстановление**
+
+```bash
+vagrant destroy elk -f
+```
+
+```bash
+vagrant up elk
+```
+
+```bash
+ansible-playbook --vault-id @prod provisioning/playbook.yml --tags="deploy elk"
+```
+
 
